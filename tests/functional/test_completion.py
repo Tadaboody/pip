@@ -3,16 +3,18 @@ import sys
 
 import pytest
 
+from pip._internal.cli.autocompletion import DELIMITER
 from tests.lib.path import Path
 
 COMPLETION_FOR_SUPPORTED_SHELLS_TESTS = (
     ('bash', """\
 _pip_completion()
-{
-    COMPREPLY=( $( COMP_WORDS="${COMP_WORDS[*]}" \\
+{{
+    COMPREPLY=( $( COMP_WORDS="${{COMP_WORDS[*]}}" \\
                    COMP_CWORD=$COMP_CWORD \\
-                   PIP_AUTO_COMPLETE=1 $1 2>/dev/null ) )
-}
+                   PIP_AUTO_COMPLETE=1 $1 2>/dev/null | \\
+                   cut -d'{delimiter}' -f1) )
+}}
 complete -o default -F _pip_completion pip"""),
     ('fish', """\
 function __fish_complete_pip
@@ -21,18 +23,19 @@ function __fish_complete_pip
         math (contains -i -- (commandline -t) $COMP_WORDS)-1 \\
     )
     set -lx PIP_AUTO_COMPLETE 1
-    string split \\  -- (eval $COMP_WORDS[1])
+    string replace '{delimiter}' \\t -- (eval $COMP_WORDS[1])
 end
 complete -fa "(__fish_complete_pip)" -c pip"""),
     ('zsh', """\
-function _pip_completion {
+function _pip_completion {{
   local words cword
   read -Ac words
   read -cn cword
   reply=( $( COMP_WORDS="$words[*]" \\
              COMP_CWORD=$(( cword-1 )) \\
-             PIP_AUTO_COMPLETE=1 $words[1] 2>/dev/null ))
-}
+             PIP_AUTO_COMPLETE=1 $words[1] 2>/dev/null | \\
+             cut -d'{delimiter}' -f1))
+}}
 compctl -K _pip_completion pip"""),
 )
 
@@ -62,7 +65,7 @@ def test_completion_for_supported_shells(
     result = script_with_launchers.pip(
         'completion', '--' + shell, use_module=False
     )
-    assert completion in result.stdout, str(result.stdout)
+    assert completion.format(delimiter=DELIMITER) in result.stdout, str(result.stdout)
 
 
 @pytest.fixture(scope="session")
@@ -92,6 +95,10 @@ def autocomplete(autocomplete_script, monkeypatch):
     return do_autocomplete
 
 
+def options(autocomplete_output):
+    return [line.partition(DELIMITER)[0] for line in autocomplete_output.splitlines()]
+
+
 def test_completion_for_unknown_shell(autocomplete_script):
     """
     Test getting completion for an unknown shell
@@ -118,7 +125,7 @@ def test_completion_for_un_snippet(autocomplete):
     """
 
     res, env = autocomplete('pip un', '1')
-    assert res.stdout.strip().split() == ['uninstall'], res.stdout
+    assert options(res.stdout) == ['uninstall'], res.stdout
 
 
 def test_completion_for_default_parameters(autocomplete):
@@ -148,7 +155,7 @@ def test_completion_short_option(autocomplete):
 
     res, env = autocomplete('pip -', '1')
 
-    assert '-h' in res.stdout.split(),\
+    assert '-h' in options(res.stdout),\
            "autocomplete function could not complete short options after ``-``"
 
 
@@ -160,7 +167,7 @@ def test_completion_short_option_for_command(autocomplete):
 
     res, env = autocomplete('pip search -', '2')
 
-    assert '-h' in res.stdout.split(),\
+    assert '-h' in options(res.stdout),\
            "autocomplete function could not complete short options after ``-``"
 
 
