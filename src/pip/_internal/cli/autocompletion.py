@@ -14,6 +14,9 @@ from pip._internal.utils.typing import MYPY_CHECK_RUNNING
 if MYPY_CHECK_RUNNING:
     from typing import Any, Dict, Iterable, List, Optional
 
+# Doesn't appear in any commands/descriptions
+DELIMITER = "*"
+
 
 def autocomplete():
     # type: () -> None
@@ -118,8 +121,12 @@ def autocomplete():
 
 def output_completion_with_description(name, description=""):
     # type: (str, Optional[str]) -> None
-    """Prints the string for completion with its description, delimited by :"""
-    print("{name}:{description}".format(name=name, description=description))
+    """Prints the string for completion with its description in a consistent way."""
+    print(
+        "{name}{delimiter}{description}".format(
+            name=name, delimiter=DELIMITER, description=description
+        )
+    )
 
 
 def get_path_completion_type(cwords, cword, opts):

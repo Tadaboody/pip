@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import sys
 import textwrap
 
+from pip._internal.cli.autocompletion import DELIMITER
 from pip._internal.cli.base_command import Command
 from pip._internal.cli.status_codes import SUCCESS
 from pip._internal.utils.misc import get_prog
@@ -22,7 +23,8 @@ COMPLETION_SCRIPTS = {
         {{
             COMPREPLY=( $( COMP_WORDS="${{COMP_WORDS[*]}}" \\
                            COMP_CWORD=$COMP_CWORD \\
-                           PIP_AUTO_COMPLETE=1 $1 2>/dev/null | cut -d':' -f1) )
+                           PIP_AUTO_COMPLETE=1 $1 2>/dev/null | \\
+                           cut -d'{delimiter}' -f1) )
         }}
         complete -o default -F _pip_completion {prog}
     """,
@@ -33,7 +35,8 @@ COMPLETION_SCRIPTS = {
           read -cn cword
           reply=( $( COMP_WORDS="$words[*]" \\
                      COMP_CWORD=$(( cword-1 )) \\
-                     PIP_AUTO_COMPLETE=1 $words[1] 2>/dev/null |cut -d':' -f1))
+                     PIP_AUTO_COMPLETE=1 $words[1] 2>/dev/null | \\
+                     cut -d'{delimiter}' -f1))
         }}
         compctl -K _pip_completion {prog}
     """,
@@ -44,7 +47,7 @@ COMPLETION_SCRIPTS = {
                 math (contains -i -- (commandline -t) $COMP_WORDS)-1 \\
             )
             set -lx PIP_AUTO_COMPLETE 1
-            string replace ':' \\t -- (eval $COMP_WORDS[1])
+            string replace '{delimiter}' \\t -- (eval $COMP_WORDS[1])
         end
         complete -fa "(__fish_complete_pip)" -c {prog}
     """,
@@ -86,8 +89,9 @@ class CompletionCommand(Command):
         shell_options = ['--' + shell for shell in sorted(shells)]
         if options.shell in shells:
             script = textwrap.dedent(
-                COMPLETION_SCRIPTS.get(options.shell, '').format(
-                    prog=get_prog())
+                COMPLETION_SCRIPTS.get(options.shell, "").format(
+                    delimiter=DELIMITER, prog=get_prog()
+                )
             )
             print(BASE_COMPLETION.format(script=script, shell=options.shell))
             return SUCCESS
