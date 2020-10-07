@@ -120,8 +120,10 @@ def autocomplete():
 
 
 def output_completion_with_description(name, description=""):
-    # type: (str, Optional[str]) -> None
+    # type: (str, str) -> None
     """Prints the string for completion with its description in a consistent way."""
+    # Make descriptions oneliners so they're grouped as one.
+    description = " ".join(description.splitlines())
     print(
         "{name}{delimiter}{description}".format(
             name=name, delimiter=DELIMITER, description=description
